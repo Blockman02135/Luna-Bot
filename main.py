@@ -746,5 +746,6 @@ async def tempban(ctx, member : discord.Member, time:int, arg:str, *, reason=Non
     await member.unban()
     if (not member.bot): 
       await member.send(f'{member.mention}, you has been unbanned in **{ctx.guild.name}**!')
-
-Bot.run('NzQxMTczOTM1NDA3NjI4MzI5.XyzuBA.SYmr6t2FPwMg7v-aRYOUmgxfpW0')
+      
+token = os.environ.get('BOT_TOKEN')
+Bot.run(str(token))

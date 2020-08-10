@@ -219,12 +219,20 @@ async def help(ctx):
         value= 'Server configuration.'
     )
     page_1.add_field(
+        name= '&getMember [member]',
+        value= "Shows member's stats."
+    )
+    page_1.add_field(
         name= '&setStats [member] [property] [value]',
         value= "Configurate member's values."
     )
     page_1.add_field(
         name= '&inv',
         value= 'Shows your inventory.'
+    )
+    page_1.add_field(
+        name= '&bal [member] or &balance [member]',
+        value= "Shows member's balance."
     )
     page_1.add_field(
         name= '&job [join/list] (job)',

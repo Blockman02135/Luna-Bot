@@ -23,8 +23,7 @@ gcursor.execute("""CREATE TABLE IF NOT EXISTS guild (
                 work_c int,
                 log_c int,
                 suggest_c int,
-                mute_role int,
-                shop text
+                mute_role int
                 )""")
 gconn.commit()
 
@@ -117,10 +116,10 @@ def check():
       file = open(f"shops//{guild.id}.json","w")
       file.write("{}")
       file.close()
-    insert = [(guild.id, None, None, None, None, None)]
+    insert = [(guild.id, None, None, None, None)]
     gcursor.execute(f"SELECT id FROM guild WHERE id={guild.id}")
     if gcursor.fetchone() == None:
-      gcursor.executemany("INSERT INTO guild VALUES (?,?,?,?,?,?)", insert)
+      gcursor.executemany("INSERT INTO guild VALUES (?,?,?,?,?)", insert)
       gconn.commit()
     for member in guild.members:
       if (not os.path.isfile(f'./invs/{member.id}.json')):
@@ -211,11 +210,11 @@ async def help(ctx):
         value= 'Open this menu.'
     )
     page_1.add_field(
-        name= '&setshop [add/rem/list] [arguments]',
+        name= '&setshop',
         value= 'Configurate the shop.'
     )
     page_1.add_field(
-        name= '&config [property] [value]',
+        name= '&config',
         value= 'Server configuration.'
     )
     page_1.add_field(
@@ -223,7 +222,7 @@ async def help(ctx):
         value= "Shows member's stats."
     )
     page_1.add_field(
-        name= '&setStats [member] [property] [value]',
+        name= '&setStats [member]',
         value= "Configurate member's values."
     )
     page_1.add_field(
@@ -235,11 +234,11 @@ async def help(ctx):
         value= "Shows member's balance."
     )
     page_1.add_field(
-        name= '&job [join/list] (job)',
-        value= 'Join or see all jobs.'
+        name= '&job',
+        value= 'Jobs.'
     )
     page_1.add_field(
-        name= '&shop [buy/list] (item)',
+        name= '&shop',
         value= 'Buy item.'
     )
     page_2 = discord.Embed(
@@ -286,7 +285,20 @@ async def help(ctx):
     await comp_help.start()
 
 @Bot.command()
-async def job(ctx,what,value=None):
+async def job(ctx,what=None,value=None):
+  if (what==None):
+    emb = discord.Embed(title= "Job")
+    emb.add_field(
+      name= "join (job)",
+      value= "Joins a job (do not specify a job to see a list of jobs).",
+      inline= False
+    )
+    emb.add_field(
+      name= "current",
+      value= "Shows current job.",
+      inline= False
+    )
+    return await ctx.send(embed=emb)
   what=what.lower()
   if (what=="join"):
     if (value==None):
@@ -327,7 +339,7 @@ async def job(ctx,what,value=None):
           inline= False
           )
       return await ctx.send(embed=msg)
-  if (what=="currnet"):
+  if (what=="current"):
     for j in mcursor.execute(f"SELECT cjob FROM member WHERE id={ctx.message.author.id} AND guild={ctx.guild.id}"):
       if (j[0]==None):
         return await ctx.send("You are not joined to job!\n`&job join [job]` to join.")
@@ -358,7 +370,25 @@ async def inv(ctx):
   return await ctx.send(embed=emb)
 
 @Bot.command()
-async def shop(ctx,*,args):
+async def shop(ctx,*,args=None):
+  if (args==None):
+    emb = discord.Embed(title= "Shop")
+    emb.add_field(
+      name= "list",
+      value= "Shows a list of items.",
+      inline= False
+    )
+    emb.add_field(
+      name= "buy [table-name]",
+      value= "Buy a item.",
+      inline= False
+    )
+    emb.add_field(
+      name= "getItem [table-name]",
+      value= "Shows a item.",
+      inline= False
+    )
+    return await ctx.send(embed=emb)
   path = f"shops//{ctx.guild.id}.json"
   args=args.split(' ')
   if (args[0]=="list"):
@@ -401,11 +431,49 @@ async def shop(ctx,*,args):
           return await ctx.send(f"You need :small_orange_diamond:**{price}** to buy **{name}** but now you have :small_orange_diamond:**{money[0]}**")
     else:
       return await ctx.send("I can't find this item:face_with_monocle:")
+  elif (args[0]=="getItem" and args[1]):
+    if (args[1]==None):
+      return await ctx.send("Please enter a item name!")
+    item = gi(path,args[1].lower())
+    if (item):
+      name = item["name"]
+      price = item["price"]
+      return await ctx.send(f"==={args[1].upper()}===\nName: **{name}**\nPrice: **{price}:small_orange_diamond:**\nTable name: `{args[1].lower()}`")
+    else:
+      return await ctx.send("I can't find this item:face_with_monocle:")
 
 @Bot.command()
-async def setshop(ctx,*,args):
+async def setshop(ctx,*,args=None):
   if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
     return await ctx.send(f':no_entry_sign:Acces deined! You need to have a "{luna_m}" role to do this!(You must create this role)')
+  if (args==None):
+    emb = discord.Embed(title= "Shop Config")
+    emb.add_field(
+      name= "clear",
+      value= "Cleans up the shop.",
+      inline= False
+    )
+    emb.add_field(
+      name= "list",
+      value= "Shows a list of items.",
+      inline= False
+    )
+    emb.add_field(
+      name= "add [table-name] [name] [price]",
+      value= "Adds or edits a item.",
+      inline= False
+    )
+    emb.add_field(
+      name= "del [table-name]",
+      value= "Removes a item.",
+      inline= False
+    )
+    emb.add_field(
+      name= "getItem [table-name]",
+      value= "Shows a item.",
+      inline= False
+    )
+    return await ctx.send(embed=emb)
   path = f"shops//{ctx.guild.id}.json"
   args=args.split(' ')
   if (args[0]=="clear"):
@@ -459,10 +527,25 @@ async def setshop(ctx,*,args):
     return await ctx.send(embed=emb)
 
 @Bot.command()
-async def config(ctx, config, *, value):
+async def config(ctx, config=None, *, value=None):
   if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
     return await ctx.send(f':no_entry_sign:Acces deined! You need to have a "{luna_m}" role to do this!(You must create this role)')
-  if config=="setSuggestID":
+  if (config!=None and value==None):
+    return await ctx.send("Please enter a value!")
+  if (config==None):
+    emb = discord.Embed(title= "Config")
+    emb.add_field(
+      name= "setSuggestID [id]",
+      value= "Writes the suggestion channel id to the database.",
+      inline= False
+    )
+    emb.add_field(
+      name= "setWorkID [id]",
+      value= "Writes the work channel id to the database.",
+      inline= False
+    )
+    return await ctx.send(embed=emb)
+  elif config=="setSuggestID":
     value = int(value)
     gcursor.execute(f"""UPDATE guild SET suggest_c={value} WHERE id={ctx.guild.id}""")
     for row in gcursor.execute(f"""SELECT suggest_c FROM guild WHERE id={ctx.guild.id}"""):
@@ -482,7 +565,8 @@ async def config(ctx, config, *, value):
 
 @Bot.command()
 async def bal(ctx,member: discord.Member):
-  member = ctx.message.author if member == None else member
+  if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+    member = ctx.message.author
   for cash in mcursor.execute(f"""SELECT money, bonus FROM member WHERE id={member.id} AND guild={ctx.guild.id}"""):
     emb = discord.Embed(
       title= f"{member}'s balance",
@@ -498,11 +582,20 @@ async def bal(ctx,member: discord.Member):
       value= f"x{cash[1]}:arrow_double_up:",
       inline= False
     )
+    if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+      emb.set_footer(
+        text= 'Only users with "Luna Moderator" role can see someone '+"else's balance"
+      )
+    else:
+      emb.set_footer(
+        text= f"&setStats [member] [money/bonus] [value] - to change it."
+      )
     await ctx.send(embed=emb)
   
 @Bot.command()
 async def balance(ctx,member: discord.Member):
-  member = ctx.message.author if member == None else member
+  if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+    member = ctx.message.author
   for cash in mcursor.execute(f"""SELECT money, bonus FROM member WHERE id={member.id} AND guild={ctx.guild.id}"""):
     emb = discord.Embed(
       title= f"{member}'s balance",
@@ -518,11 +611,20 @@ async def balance(ctx,member: discord.Member):
       value= f"x{cash[1]}:arrow_double_up:",
       inline= False
     )
+    if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+      emb.set_footer(
+        text= 'Only users with "Luna Moderator" role can see someone '+"else's balance"
+      )
+    else:
+      emb.set_footer(
+        text= f"&setStats [member] [money/bonus] [value] - to change it."
+      )
     await ctx.send(embed=emb)
 
 @Bot.command()
 async def getMember(ctx, member: discord.Member):
-  check()
+  if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+    member = ctx.message.author
   for row in mcursor.execute(f"SELECT id,guild,money,bonus,level,exp,cjob FROM member WHERE id={member.id} AND guild={ctx.guild.id}"):
     emb = discord.Embed(
       title= f"===**{member}**===",
@@ -569,13 +671,44 @@ async def getMember(ctx, member: discord.Member):
       inline= False
     )
     emb.set_thumbnail(url= member.avatar_url)
+    if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
+      emb.set_footer(
+        text= 'Only users with "Luna Moderator" role can see someone '+"else's profile."
+      )
+    else:
+      emb.set_footer(
+        text= f"&setStats [member] [money/bonus] [value] - to change it."
+      )
     await ctx.send(embed=emb)
 
 @Bot.command()
-async def setStats(ctx, member : discord.Member, what,*, value=None):
+async def setStats(ctx, member : discord.Member, what=None,*, value=None):
   if (not utils.get(ctx.guild.roles,name=luna_m) in ctx.message.author.roles):
     return await ctx.send(f':no_entry_sign:Acces deined! You need to have a "{luna_m}" role to do this!(You must create this role)')
-  if (value==None):
+  if (what==None):
+    emb = discord.Embed(title= "Stats Config")
+    emb.add_field(
+      name= "money [value]",
+      value= "Changes the value of money a user has.",
+      inline= False
+    )
+    emb.add_field(
+      name= "bonus [value]",
+      value= "Changes the value of bonus a user has.",
+      inline= False
+    )
+    emb.add_field(
+      name= "level [value] or lvl [value]",
+      value= "Changes the value of level a user has.",
+      inline= False
+    )
+    emb.add_field(
+      name= "exp [value]",
+      value= "Changes the value of exp a user has.",
+      inline= False
+    )
+    return await ctx.send(embed=emb)
+  if (what!=None and value==None):
     await ctx.send(f'{ctx.message.author.mention}, please enter a value!')
   else:
     if (what.lower()=="money"):
